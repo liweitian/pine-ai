@@ -40,10 +40,10 @@ func (s *runtimeSnapshot) UpstreamModel() string {
 }
 
 type modelStore interface {
-	CreateModel(ctx context.Context, rec persistence.ModelRecord) error
-	UpdateModel(ctx context.Context, rec persistence.ModelRecord) error
-	GetModel(ctx context.Context, modelName, version string) (persistence.ModelRecord, error)
-	ListModels(ctx context.Context) []persistence.ModelRecord
+	CreateModel(ctx context.Context, rec *persistence.ModelRecord) error
+	UpdateModel(ctx context.Context, rec *persistence.ModelRecord) error
+	GetModel(ctx context.Context, modelName, version string) (*persistence.ModelRecord, error)
+	ListModels(ctx context.Context) []*persistence.ModelRecord
 }
 
 type Registry struct {
@@ -73,7 +73,7 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 		State:         persistence.StateReady,
 	}
 
-	if err := r.store.CreateModel(context.Background(), rec); err != nil {
+	if err := r.store.CreateModel(context.Background(), &rec); err != nil {
 		return err
 	}
 
@@ -121,7 +121,6 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	rec.UpstreamModel = req.UpstreamModel
 	rec.Concurrency = req.Concurrency
 	rec.Weight = req.Weight
-	rec.Available = true
 	rec.Deleted = false
 	rec.State = persistence.StateReady
 	return r.store.UpdateModel(context.Background(), rec)
@@ -136,7 +135,6 @@ func (r *Registry) Delete(name, version string) error {
 		return errors.New("model version already deleted")
 	}
 
-	rec.Available = false
 	rec.Deleted = true
 	rec.State = persistence.StateDeleted
 	return r.store.UpdateModel(context.Background(), rec)
@@ -175,9 +173,6 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 	}
 	if rec.Deleted {
 		return nil, nil, errors.New("model version deleted")
-	}
-	if !rec.Available {
-		return nil, nil, errors.New("model version unavailable")
 	}
 
 	r.runtimeMu.RLock()

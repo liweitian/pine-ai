@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"pine-ai/global/constant"
+	"pine-ai/persistence"
 	service "pine-ai/service/llm_service"
 	"strings"
+	"time"
 )
 
 type InferProvider interface {
@@ -19,6 +21,20 @@ var InferService *inferService
 
 func init() {
 	InferService = &inferService{}
+	releaseIdleModel()
+}
+
+func releaseIdleModel() {
+	records := persistence.Store.ListModels(context.Background())
+	for _, rec := range records {
+		if time.Since(rec.LastUsedAt) > 1*time.Hour {
+			rec.Deleted = true
+			persistence.Store.UpdateModel(context.Background(), rec)
+		}
+	}
+	defer time.AfterFunc(time.Hour, func() {
+		releaseIdleModel()
+	})
 }
 
 // StreamInfer streams tokens to onToken and emits onMeta once at the beginning.
@@ -30,11 +46,11 @@ func (s *inferService) StreamInfer(
 	input string,
 	onToken func(token string) error,
 ) error {
+	persistence.Store.UpdateLastUsedAt(ctx, model, version)
 	snap, release, err := ModelRegistry.AcquireForInfer(model, version)
 	if err != nil {
 		return err
 	}
-
 	defer release()
 	backend := snap.BackendType()
 	chanStream := make(chan string, 32)
