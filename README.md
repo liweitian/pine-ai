@@ -14,11 +14,11 @@
 - 当某个推理开始时，会创建当前任务快照，有唯一id,后续如需保持上下文一致，可在任务结束前拿到唯一id，可查看任务所用模型+版本
 - 未做过多参数校验，后面给了test case，按照test case，可基本覆盖完成的场景
 
-项目构建于golang 1.26
-
-make build 构建
-make run 运行web服务器于8080端口
-可提供运行时的环境变量用于创建openai client端, 可直接改文件中的api-key client/llm/open-ai.go
+项目构建于golang 1.26 gin框架
+1. go mod tidy 下载依赖
+2. make build 构建
+3. make run 运行web服务器于8080端口
+可提供运行时的环境变量用于创建openai client端, 或直接改文件中的api-key，查看文件client/llm/open-ai.go
 
 //持久层定义如下
 type ModelRecord struct {
@@ -34,8 +34,8 @@ type ModelRecord struct {
 }
 
 backend_type为 "openai" | "ollama" | "qwen" |  "mock"
-其中如果提供openai的api-key则可以调用openai的接口，否则会报错，启动时需要添加环境变量。其它实际为本地mock端口，
-version 可用于处理实际的大模型版本 比如backend_type为 "openai", version可以是gpt3.5
+其中如果提供openai的api-key则可以调用openai的接口，否则会报错，启动时需要添加环境变量。其它backend_type实际为本地mock，
+version可用于处理实际的大模型版本 比如backend_type为 "openai", version可以是gpt3.5
 
 在命令行中依次运行以下命令
 BASE="http://127.0.0.1:8080/api/v1/pine-ai"
