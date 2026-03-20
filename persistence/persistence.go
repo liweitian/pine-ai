@@ -13,33 +13,42 @@ var (
 	ErrModelVersionNotFound = errors.New("model version not found")
 )
 
+type BackendType string
+type State string
+
+const (
+	BackendTypeOpenAI BackendType = "openai"
+	StateReady        State       = "ready"
+	StateDeleted      State       = "deleted"
+	StateUnavailable  State       = "unavailable"
+)
+
 type ModelRecord struct {
-	ModelName     string    `json:"model_name"`
-	Version       string    `json:"version"`
-	BackendType   string    `json:"backend_type"`
-	IsMock        bool      `json:"is_mock"`
-	UpstreamModel string    `json:"upstream_model"`
-	Available     bool      `json:"available"`
-	Deleted       bool      `json:"deleted"`
-	State         string    `json:"state"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ModelName     string      `json:"model_name"`
+	Version       string      `json:"version"`
+	BackendType   BackendType `json:"backend_type"`
+	IsMock        bool        `json:"is_mock"`
+	UpstreamModel string      `json:"upstream_model"`
+	Available     bool        `json:"available"`
+	Deleted       bool        `json:"deleted"`
+	State         State       `json:"state"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }
 
-type Store struct {
+type store struct {
 	mu     sync.RWMutex
 	models map[string]map[string]ModelRecord
 }
 
-var Persistence = New()
+var Store *store
 
-func New() *Store {
-	return &Store{
+func init() {
+	Store = &store{
 		models: make(map[string]map[string]ModelRecord),
 	}
 }
 
-func (p *Store) CreateModel(ctx context.Context, rec ModelRecord) error {
-	_ = ctx
+func (p *store) CreateModel(ctx context.Context, rec ModelRecord) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -54,7 +63,7 @@ func (p *Store) CreateModel(ctx context.Context, rec ModelRecord) error {
 	return nil
 }
 
-func (p *Store) UpdateModel(ctx context.Context, rec ModelRecord) error {
+func (p *store) UpdateModel(ctx context.Context, rec ModelRecord) error {
 	_ = ctx
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -71,7 +80,7 @@ func (p *Store) UpdateModel(ctx context.Context, rec ModelRecord) error {
 	return nil
 }
 
-func (p *Store) GetModel(ctx context.Context, modelName, version string) (ModelRecord, error) {
+func (p *store) GetModel(ctx context.Context, modelName, version string) (ModelRecord, error) {
 	_ = ctx
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -86,7 +95,7 @@ func (p *Store) GetModel(ctx context.Context, modelName, version string) (ModelR
 	return rec, nil
 }
 
-func (p *Store) ListModels(ctx context.Context) []ModelRecord {
+func (p *store) ListModels(ctx context.Context) []ModelRecord {
 	_ = ctx
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -99,20 +108,20 @@ func (p *Store) ListModels(ctx context.Context) []ModelRecord {
 	return out
 }
 
-func (p *Store) Save(ctx context.Context, key string, value any) error {
+func (p *store) Save(ctx context.Context, key string, value any) error {
 	_ = ctx
 	_ = key
 	_ = value
 	return nil
 }
 
-func (p *Store) Get(ctx context.Context, key string) (any, error) {
+func (p *store) Get(ctx context.Context, key string) (any, error) {
 	_ = ctx
 	_ = key
 	return nil, nil
 }
 
-func (p *Store) Delete(ctx context.Context, key string) error {
+func (p *store) Delete(ctx context.Context, key string) error {
 	_ = ctx
 	_ = key
 	return nil

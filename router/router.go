@@ -1,31 +1,29 @@
 package router
 
 import (
-	"net/http"
+	v1 "pine-ai/router/api/v1"
 
-	"pine-ai/config"
-	"pine-ai/router/api"
-	"pine-ai/service"
-
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-func New(cfg config.Config) *gin.Engine {
-	r := gin.Default()
+func InitRouter() *gin.Engine {
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowCredentials = true
+	config.AllowHeaders = []string{"*"}
+	r := gin.New()
+	r.Use(cors.New(config))
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
-	// Model托管（注册/更新/查询）
-	modelRegistry := service.NewRegistry()
-	api.RegisterModelAPI(r, modelRegistry)
-
-	// 推理服务（SSE流式输出）
-	inferService := service.NewInferService(cfg, modelRegistry)
-	api.RegisterInferAPI(r, inferService)
-
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
-	})
+	apiV1 := r.Group("/api/v1/pine-ai")
+	{
+		apiV1.POST("/models", v1.RegisterModelAPI)
+		// apiV1.GET("/models", v1.ListModelsAPI)
+		// apiV1.PUT("/models/:name/version/:v", v1.UpdateModelAPI)
+		// apiV1.POST("/infer", v1.InferAPI)
+	}
 
 	return r
 }
