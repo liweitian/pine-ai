@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"pine-ai/global/constant"
+	"pine-ai/global/enum"
 	"pine-ai/persistence"
 	service "pine-ai/service/llm_service"
 	"strings"
@@ -54,30 +54,26 @@ func (s *inferService) StreamInfer(
 	chanStream := make(chan string, 32)
 	var provider InferProvider
 	switch backend {
-	case constant.BackendTypeOpenAI:
+	case enum.BackendTypeOpenAI:
 		provider = service.OpenAIService
-	case constant.BackendTypeOllama:
+	case enum.BackendTypeOllama:
 		provider = service.OllamaService
-	case constant.BackendTypeQwen:
+	case enum.BackendTypeQwen:
 		provider = service.QwenService
-	case constant.BackendTypeMock:
-		provider = service.MockService
-	case constant.BackendTypeMockTimeout:
-		provider = service.MockService
-	case constant.BackendTypeMockNoResponse:
+	case enum.BackendTypeMock:
 		provider = service.MockService
 	default:
-		return errors.New("unknown backend type: " + backend)
+		return errors.New("unknown backend type: " + string(backend))
 	}
-
-	if err := provider.Infer(ctx, snap.UpstreamModel(), chanStream); err != nil {
+	asyncCtx := context.Background()
+	if err := provider.Infer(asyncCtx, snap.Version(), chanStream); err != nil {
 		return err
 	}
 
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-asyncCtx.Done():
+			return asyncCtx.Err()
 		case msg, ok := <-chanStream:
 			if !ok {
 				return nil

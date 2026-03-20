@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"pine-ai/dto"
+	"pine-ai/global/enum"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,31 +14,27 @@ import (
 )
 
 type ModelVersionView struct {
-	ModelName     string    `json:"model_name"`
-	Version       string    `json:"version"`
-	BackendType   string    `json:"backend_type"`
-	Simulate      bool      `json:"simulate"`
-	UpstreamModel string    `json:"upstream_model"`
-	InUseCount    int64     `json:"in_use_count"`
-	Deleted       bool      `json:"deleted"`
-	State         string    `json:"state"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ModelName   string    `json:"model_name"`
+	Version     string    `json:"version"`
+	BackendType string    `json:"backend_type"`
+	InUseCount  int64     `json:"in_use_count"`
+	Deleted     bool      `json:"deleted"`
+	State       string    `json:"state"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type runtimeSnapshot struct {
-	id            string
-	backendType   string
-	upstreamModel string
-	concurrency   int
-	weight        int
-	inFlight      int64
+	id          string
+	backendType enum.BackendType
+	version     string
+	concurrency int
+	weight      int
+	inFlight    int64
 }
 
-func (s *runtimeSnapshot) ID() string          { return s.id }
-func (s *runtimeSnapshot) BackendType() string { return s.backendType }
-func (s *runtimeSnapshot) UpstreamModel() string {
-	return s.upstreamModel
-}
+func (s *runtimeSnapshot) ID() string                    { return s.id }
+func (s *runtimeSnapshot) BackendType() enum.BackendType { return s.backendType }
+func (s *runtimeSnapshot) Version() string               { return s.version }
 
 type modelStore interface {
 	CreateModel(ctx context.Context, rec *persistence.ModelRecord) error
@@ -63,14 +60,13 @@ func init() {
 
 func (r *Registry) Register(req dto.RegisterModelRequest) error {
 	rec := persistence.ModelRecord{
-		ModelName:     req.ModelName,
-		Version:       req.Version,
-		BackendType:   persistence.BackendType(req.BackendType),
-		UpstreamModel: req.UpstreamModel,
-		Concurrency:   req.Concurrency,
-		Weight:        req.Weight,
-		Deleted:       false,
-		State:         persistence.StateReady,
+		ModelName:   req.ModelName,
+		Version:     req.Version,
+		BackendType: enum.BackendType(req.BackendType),
+		Concurrency: req.Concurrency,
+		Weight:      req.Weight,
+		Deleted:     false,
+		State:       persistence.StateReady,
 	}
 
 	if err := r.store.CreateModel(context.Background(), &rec); err != nil {
@@ -78,11 +74,10 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 	}
 
 	snap := &runtimeSnapshot{
-		id:            fmt.Sprintf("%s-%s-%d", req.ModelName, req.Version, time.Now().UnixNano()),
-		backendType:   req.BackendType,
-		upstreamModel: req.UpstreamModel,
-		concurrency:   req.Concurrency,
-		weight:        req.Weight,
+		id:          fmt.Sprintf("%s-%s-%d", req.ModelName, req.Version, time.Now().UnixNano()),
+		backendType: enum.BackendType(req.BackendType),
+		concurrency: req.Concurrency,
+		weight:      req.Weight,
 	}
 
 	r.runtimeMu.Lock()
@@ -104,11 +99,10 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	}
 
 	newSnap := &runtimeSnapshot{
-		id:            fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
-		backendType:   req.BackendType,
-		upstreamModel: req.UpstreamModel,
-		concurrency:   req.Concurrency,
-		weight:        req.Weight,
+		id:          fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
+		backendType: enum.BackendType(rec.BackendType),
+		concurrency: req.Concurrency,
+		weight:      req.Weight,
 	}
 	r.runtimeMu.Lock()
 	if _, ok := r.runtimes[name]; !ok {
@@ -117,8 +111,7 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	r.runtimes[name][version] = newSnap
 	r.runtimeMu.Unlock()
 
-	rec.BackendType = persistence.BackendType(req.BackendType)
-	rec.UpstreamModel = req.UpstreamModel
+	rec.BackendType = enum.BackendType(req.BackendType)
 	rec.Concurrency = req.Concurrency
 	rec.Weight = req.Weight
 	rec.Deleted = false
@@ -153,14 +146,13 @@ func (r *Registry) List() []ModelVersionView {
 		r.runtimeMu.RUnlock()
 
 		out = append(out, ModelVersionView{
-			ModelName:     rec.ModelName,
-			Version:       rec.Version,
-			BackendType:   string(rec.BackendType),
-			UpstreamModel: rec.UpstreamModel,
-			InUseCount:    inUseCount,
-			Deleted:       rec.Deleted,
-			State:         string(rec.State),
-			UpdatedAt:     rec.UpdatedAt,
+			ModelName:   rec.ModelName,
+			Version:     rec.Version,
+			BackendType: string(rec.BackendType),
+			InUseCount:  inUseCount,
+			Deleted:     rec.Deleted,
+			State:       string(rec.State),
+			UpdatedAt:   rec.UpdatedAt,
 		})
 	}
 	return out
@@ -181,11 +173,10 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 
 	if snap == nil {
 		snap = &runtimeSnapshot{
-			id:            fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
-			backendType:   string(rec.BackendType),
-			upstreamModel: rec.UpstreamModel,
-			concurrency:   rec.Concurrency,
-			weight:        rec.Weight,
+			id:          fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
+			backendType: enum.BackendType(rec.BackendType),
+			concurrency: rec.Concurrency,
+			weight:      rec.Weight,
 		}
 		r.runtimeMu.Lock()
 		if _, ok := r.runtimes[name]; !ok {

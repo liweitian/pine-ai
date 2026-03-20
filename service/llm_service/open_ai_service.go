@@ -37,9 +37,10 @@ func init() {
 	OpenAIService = &openAIService{}
 }
 
+// 以防模型传入有问题 model字段实际并未使用
 func (o *openAIService) Infer(ctx context.Context, model string, chanStream chan string) error {
 	req := openai.ChatCompletionRequest{
-		Model:       model,
+		Model:       openai.GPT3Dot5Turbo,
 		MaxTokens:   MaxTokenLimit,
 		Temperature: ChatTemperature,
 		Messages:    []openai.ChatCompletionMessage{defaultSystemMessage},
@@ -73,7 +74,6 @@ func (o *openAIService) Infer(ctx context.Context, model string, chanStream chan
 			sb.WriteString(response.Choices[0].Delta.Content)
 			data, _ := json.Marshal(response.Choices[0])
 			chanStream <- string(data)
-			// fmt.Printf("Stream response: %v\n", response.Choices[0])
 		}
 	}()
 	return nil

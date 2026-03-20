@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"errors"
+	"pine-ai/global/enum"
 	"sync"
 	"time"
 )
@@ -13,27 +14,24 @@ var (
 	ErrModelVersionNotFound = errors.New("model version not found")
 )
 
-type BackendType string
 type State string
 
 const (
-	BackendTypeOpenAI BackendType = "openai"
-	StateReady        State       = "ready"
-	StateDeleted      State       = "deleted"
-	StateUnavailable  State       = "unavailable"
+	StateReady       State = "ready"
+	StateDeleted     State = "deleted"
+	StateUnavailable State = "unavailable"
 )
 
 type ModelRecord struct {
-	ModelName     string      `json:"model_name"`
-	Version       string      `json:"version"`
-	BackendType   BackendType `json:"backend_type"`
-	UpstreamModel string      `json:"upstream_model"`
-	Concurrency   int         `json:"concurrency"`
-	Weight        int         `json:"weight"`
-	Deleted       bool        `json:"deleted"`
-	State         State       `json:"state"`
-	LastUsedAt    time.Time   `json:"last_used_at"`
-	UpdatedAt     time.Time   `json:"updated_at"`
+	ModelName   string           `json:"model_name"`
+	Version     string           `json:"version"`
+	BackendType enum.BackendType `json:"backend_type"`
+	Concurrency int              `json:"concurrency"`
+	Weight      int              `json:"weight"`
+	Deleted     bool             `json:"deleted"`
+	State       State            `json:"state"`
+	LastUsedAt  time.Time        `json:"last_used_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
 }
 
 type store struct {

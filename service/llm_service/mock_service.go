@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"pine-ai/global/constant"
+	"pine-ai/global/enum"
 	"strings"
 	"time"
 )
@@ -16,22 +16,19 @@ func init() {
 	MockService = &mockService{}
 }
 
-func (m *mockService) Infer(ctx context.Context, model string, chanStream chan string) error {
-	mode := strings.ToLower(model)
-	if strings.Contains(mode, constant.BackendTypeMockTimeout) {
+const (
+	MockResponse = "this is a very long mock response, this is a very long mock response, this is a very long mock response, this is a very long mock response, this is a very long mock response"
+)
+
+func (m *mockService) Infer(ctx context.Context, version string, chanStream chan string) error {
+	if strings.Contains(version, string(enum.VersionMockTimeout)) {
 		time.Sleep(3 * time.Second)
 		chanStream <- "<!error>:timeout"
 		return errors.New("mock timeout")
 	}
-	if strings.Contains(mode, constant.BackendTypeMockNoResponse) {
-		<-ctx.Done()
-		chanStream <- "<!error>:no_response"
-		return errors.New("mock no response")
-	}
 	go func() {
 		defer close(chanStream)
-		text := "mock service streaming response"
-		tokens := strings.Fields(text)
+		tokens := strings.Fields(MockResponse)
 		if len(tokens) == 0 {
 			tokens = []string{"..."}
 		}

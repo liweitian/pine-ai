@@ -1,6 +1,7 @@
 package router
 
 import (
+	"net/http"
 	v1 "pine-ai/router/api/v1"
 	"pine-ai/router/middleware"
 
@@ -24,6 +25,9 @@ func InitRouter() *gin.Engine {
 		apiV1.GET("/models", v1.ListModelsAPI)
 		apiV1.PUT("/models/:name/version/:v", v1.UpdateModelAPI)
 		apiV1.POST("/infer", v1.InferAPI)
+		apiV1.GET("/hello", func(ctx *gin.Context) {
+			ctx.JSON(http.StatusOK, gin.H{"message": "hello"})
+		})
 	}
 	return r
 }
