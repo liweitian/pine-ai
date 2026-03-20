@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"pine-ai/dto"
 	"pine-ai/global/enum"
 	"sync"
@@ -77,6 +78,7 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 		id:          fmt.Sprintf("%s-%s-%d", req.ModelName, req.Version, time.Now().UnixNano()),
 		backendType: enum.BackendType(req.BackendType),
 		concurrency: req.Concurrency,
+		version:     req.Version,
 		weight:      req.Weight,
 	}
 
@@ -159,6 +161,29 @@ func (r *Registry) List() []ModelVersionView {
 }
 
 func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func(), error) {
+	if version == "" {
+		versions := r.runtimes[name]
+		if len(versions) == 0 {
+			return nil, nil, errors.New("no model version found")
+		}
+		totalWeight := 0
+		targetVersion := ""
+		for _, version := range versions {
+			totalWeight += version.weight
+		}
+		randomWeight := rand.Intn(totalWeight)
+		for _, version := range versions {
+			randomWeight -= version.weight
+			if randomWeight <= 0 {
+				targetVersion = version.Version()
+				break
+			}
+		}
+		if targetVersion == "" {
+			return nil, nil, errors.New("no model version found")
+		}
+		return r.AcquireForInfer(name, targetVersion)
+	}
 	rec, err := r.store.GetModel(context.Background(), name, version)
 	if err != nil {
 		return nil, nil, err

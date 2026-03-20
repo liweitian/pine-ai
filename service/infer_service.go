@@ -44,11 +44,11 @@ func (s *inferService) StreamInfer(
 	input string,
 	onToken func(token string) error,
 ) error {
-	persistence.Store.UpdateLastUsedAt(ctx, model, version)
 	snap, release, err := ModelRegistry.AcquireForInfer(model, version)
 	if err != nil {
 		return err
 	}
+	persistence.Store.UpdateLastUsedAt(ctx, model, snap.version)
 	defer release()
 	backend := snap.BackendType()
 	chanStream := make(chan string, 32)

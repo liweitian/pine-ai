@@ -29,8 +29,6 @@ var (
 		Role:    openai.ChatMessageRoleSystem,
 		Content: "You are a helpful assistant.",
 	}
-
-	gptshellAvailableModels = []string{openai.GPT3Dot5Turbo, openai.GPT4}
 )
 
 func init() {
@@ -40,7 +38,7 @@ func init() {
 // 以防模型传入有问题 model字段实际并未使用
 func (o *openAIService) Infer(ctx context.Context, model string, chanStream chan string) error {
 	req := openai.ChatCompletionRequest{
-		Model:       openai.GPT3Dot5Turbo,
+		Model:       openai.GPT4o,
 		MaxTokens:   MaxTokenLimit,
 		Temperature: ChatTemperature,
 		Messages:    []openai.ChatCompletionMessage{defaultSystemMessage},

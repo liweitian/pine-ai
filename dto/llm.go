@@ -20,6 +20,6 @@ type UpdateModelRequest struct {
 
 type InferRequest struct {
 	Model   string `json:"model" binding:"required"`
-	Version string `json:"version" binding:"required"`
+	Version string `json:"version"`
 	Input   string `json:"input" binding:"required"`
 }
