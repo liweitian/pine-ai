@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"pine-ai/persistence"
+
+	"github.com/google/uuid"
 )
 
 type ModelVersionView struct {
@@ -198,8 +200,9 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 
 	if snap == nil {
 		snap = &runtimeSnapshot{
-			id:          fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
+			id:          fmt.Sprintf("%s-%s-%s", name, version, uuid.New().String()),
 			backendType: enum.BackendType(rec.BackendType),
+			version:     version,
 			concurrency: rec.Concurrency,
 			weight:      rec.Weight,
 		}
