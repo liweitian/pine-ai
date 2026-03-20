@@ -37,8 +37,6 @@ func releaseIdleModel() {
 	})
 }
 
-// StreamInfer streams tokens to onToken and emits onMeta once at the beginning.
-// It does not deal with SSE formatting; handlers should convert tokens to SSE frames.
 func (s *inferService) StreamInfer(
 	ctx context.Context,
 	model string,
