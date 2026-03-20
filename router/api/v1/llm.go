@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"pine-ai/dto"
 	"pine-ai/global"
+	"pine-ai/metrics"
 	"pine-ai/router/middleware"
 	"pine-ai/service"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -79,6 +81,7 @@ func InferAPI(c *gin.Context) {
 		return
 	}
 	traceID := c.GetString(middleware.TraceIDKey)
+	start := time.Now()
 
 	err := service.InferService.StreamInfer(
 		c.Request.Context(),
@@ -102,6 +105,7 @@ func InferAPI(c *gin.Context) {
 		writeSSE(c, "error", gin.H{"code": code, "message": msg, "trace_id": traceID})
 		flusher.Flush()
 	}
+	metrics.ObserveInfer(req.Model, req.Version, err == nil, time.Since(start))
 	writeSSE(c, "done", gin.H{"ok": err == nil, "trace_id": traceID})
 	flusher.Flush()
 }
