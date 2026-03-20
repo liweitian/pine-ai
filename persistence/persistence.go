@@ -27,8 +27,9 @@ type ModelRecord struct {
 	ModelName     string      `json:"model_name"`
 	Version       string      `json:"version"`
 	BackendType   BackendType `json:"backend_type"`
-	Simulate      bool        `json:"simulate"`
 	UpstreamModel string      `json:"upstream_model"`
+	Concurrency   int         `json:"concurrency"`
+	Weight        int         `json:"weight"`
 	Available     bool        `json:"available"`
 	Deleted       bool        `json:"deleted"`
 	State         State       `json:"state"`

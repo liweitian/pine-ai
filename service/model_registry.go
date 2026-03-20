@@ -18,8 +18,6 @@ type ModelVersionView struct {
 	BackendType   string    `json:"backend_type"`
 	Simulate      bool      `json:"simulate"`
 	UpstreamModel string    `json:"upstream_model"`
-	Available     bool      `json:"available"`
-	InUse         bool      `json:"in_use"`
 	InUseCount    int64     `json:"in_use_count"`
 	Deleted       bool      `json:"deleted"`
 	State         string    `json:"state"`
@@ -29,15 +27,14 @@ type ModelVersionView struct {
 type runtimeSnapshot struct {
 	id            string
 	backendType   string
-	simulate      bool
 	upstreamModel string
-
-	inFlight int64
+	concurrency   int
+	weight        int
+	inFlight      int64
 }
 
 func (s *runtimeSnapshot) ID() string          { return s.id }
 func (s *runtimeSnapshot) BackendType() string { return s.backendType }
-func (s *runtimeSnapshot) Simulate() bool      { return s.simulate }
 func (s *runtimeSnapshot) UpstreamModel() string {
 	return s.upstreamModel
 }
@@ -69,9 +66,9 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 		ModelName:     req.ModelName,
 		Version:       req.Version,
 		BackendType:   persistence.BackendType(req.BackendType),
-		Simulate:      req.Simulate,
 		UpstreamModel: req.UpstreamModel,
-		Available:     true,
+		Concurrency:   req.Concurrency,
+		Weight:        req.Weight,
 		Deleted:       false,
 		State:         persistence.StateReady,
 	}
@@ -83,8 +80,9 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 	snap := &runtimeSnapshot{
 		id:            fmt.Sprintf("%s-%s-%d", req.ModelName, req.Version, time.Now().UnixNano()),
 		backendType:   req.BackendType,
-		simulate:      req.Simulate,
 		upstreamModel: req.UpstreamModel,
+		concurrency:   req.Concurrency,
+		weight:        req.Weight,
 	}
 
 	r.runtimeMu.Lock()
@@ -108,8 +106,9 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	newSnap := &runtimeSnapshot{
 		id:            fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
 		backendType:   req.BackendType,
-		simulate:      req.Simulate,
 		upstreamModel: req.UpstreamModel,
+		concurrency:   req.Concurrency,
+		weight:        req.Weight,
 	}
 	r.runtimeMu.Lock()
 	if _, ok := r.runtimes[name]; !ok {
@@ -119,8 +118,9 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	r.runtimeMu.Unlock()
 
 	rec.BackendType = persistence.BackendType(req.BackendType)
-	rec.Simulate = req.Simulate
 	rec.UpstreamModel = req.UpstreamModel
+	rec.Concurrency = req.Concurrency
+	rec.Weight = req.Weight
 	rec.Available = true
 	rec.Deleted = false
 	rec.State = persistence.StateReady
@@ -158,10 +158,7 @@ func (r *Registry) List() []ModelVersionView {
 			ModelName:     rec.ModelName,
 			Version:       rec.Version,
 			BackendType:   string(rec.BackendType),
-			Simulate:      rec.Simulate,
 			UpstreamModel: rec.UpstreamModel,
-			Available:     rec.Available,
-			InUse:         inUseCount > 0,
 			InUseCount:    inUseCount,
 			Deleted:       rec.Deleted,
 			State:         string(rec.State),
@@ -191,14 +188,14 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 		snap = &runtimeSnapshot{
 			id:            fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
 			backendType:   string(rec.BackendType),
-			simulate:      rec.Simulate,
 			upstreamModel: rec.UpstreamModel,
+			concurrency:   rec.Concurrency,
+			weight:        rec.Weight,
 		}
 		r.runtimeMu.Lock()
 		if _, ok := r.runtimes[name]; !ok {
 			r.runtimes[name] = make(map[string]*runtimeSnapshot)
 		}
-		// Double-check to avoid races creating multiple snapshots.
 		if existing := r.runtimes[name][version]; existing != nil {
 			snap = existing
 		} else {
@@ -207,7 +204,21 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 		r.runtimeMu.Unlock()
 	}
 
-	atomic.AddInt64(&snap.inFlight, 1)
+	if snap.concurrency > 0 {
+		current := atomic.LoadInt64(&snap.inFlight)
+		for {
+			if int(current) >= snap.concurrency {
+				return nil, nil, fmt.Errorf("model version concurrency exceeded: limit=%d", snap.concurrency)
+			}
+			if atomic.CompareAndSwapInt64(&snap.inFlight, current, current+1) {
+				break
+			}
+			current = atomic.LoadInt64(&snap.inFlight)
+		}
+	} else {
+		atomic.AddInt64(&snap.inFlight, 1)
+	}
+
 	release := func() {
 		atomic.AddInt64(&snap.inFlight, -1)
 	}

@@ -6,6 +6,8 @@ type RegisterModelRequest struct {
 	BackendType   string `json:"backend_type" binding:"required"`
 	Simulate      bool   `json:"simulate"`
 	UpstreamModel string `json:"upstream_model"`
+	Concurrency   int    `json:"concurrency"`
+	Weight        int    `json:"weight"`
 }
 
 type UpdateModelRequest struct {
@@ -14,6 +16,8 @@ type UpdateModelRequest struct {
 	BackendType   string `json:"backend_type" binding:"required"`
 	Simulate      bool   `json:"simulate"`
 	UpstreamModel string `json:"upstream_model"`
+	Concurrency   int    `json:"concurrency"`
+	Weight        int    `json:"weight"`
 }
 
 type InferRequest struct {

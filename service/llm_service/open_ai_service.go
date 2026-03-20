@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	client "pine-ai/client/llm"
 
@@ -38,12 +37,11 @@ func init() {
 	OpenAIService = &openAIService{}
 }
 
-func (o *openAIService) Infer(ctx context.Context, model string, userId uint, chanStream chan string) error {
+func (o *openAIService) Infer(ctx context.Context, model string, chanStream chan string) error {
 	req := openai.ChatCompletionRequest{
 		Model:       model,
 		MaxTokens:   MaxTokenLimit,
 		Temperature: ChatTemperature,
-		User:        fmt.Sprint(userId),
 		Messages:    []openai.ChatCompletionMessage{defaultSystemMessage},
 		Stream:      true,
 	}
