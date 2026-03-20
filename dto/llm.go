@@ -9,6 +9,8 @@ type RegisterModelRequest struct {
 }
 
 type UpdateModelRequest struct {
+	ModelName     string `json:"model_name" binding:"required"`
+	Version       string `json:"version" binding:"required"`
 	BackendType   string `json:"backend_type" binding:"required"`
 	Simulate      bool   `json:"simulate"`
 	UpstreamModel string `json:"upstream_model"`

@@ -20,10 +20,9 @@ func InitRouter() *gin.Engine {
 	apiV1 := r.Group("/api/v1/pine-ai")
 	{
 		apiV1.POST("/models", v1.RegisterModelAPI)
-		// apiV1.GET("/models", v1.ListModelsAPI)
-		// apiV1.PUT("/models/:name/version/:v", v1.UpdateModelAPI)
-		// apiV1.POST("/infer", v1.InferAPI)
+		apiV1.GET("/models", v1.ListModelsAPI)
+		apiV1.PUT("/models/:name/version/:v", v1.UpdateModelAPI)
+		apiV1.POST("/infer", v1.InferAPI)
 	}
-
 	return r
 }

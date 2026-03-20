@@ -81,7 +81,6 @@ func (p *store) UpdateModel(ctx context.Context, rec ModelRecord) error {
 }
 
 func (p *store) GetModel(ctx context.Context, modelName, version string) (ModelRecord, error) {
-	_ = ctx
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	versions, ok := p.models[modelName]
@@ -96,7 +95,6 @@ func (p *store) GetModel(ctx context.Context, modelName, version string) (ModelR
 }
 
 func (p *store) ListModels(ctx context.Context) []ModelRecord {
-	_ = ctx
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	out := make([]ModelRecord, 0)
@@ -106,23 +104,4 @@ func (p *store) ListModels(ctx context.Context) []ModelRecord {
 		}
 	}
 	return out
-}
-
-func (p *store) Save(ctx context.Context, key string, value any) error {
-	_ = ctx
-	_ = key
-	_ = value
-	return nil
-}
-
-func (p *store) Get(ctx context.Context, key string) (any, error) {
-	_ = ctx
-	_ = key
-	return nil, nil
-}
-
-func (p *store) Delete(ctx context.Context, key string) error {
-	_ = ctx
-	_ = key
-	return nil
 }

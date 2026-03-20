@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	client "pine-ai/client/llm"
 	"strings"
 	"time"
-
-	"pine-ai/config"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -21,72 +20,51 @@ type InferMeta struct {
 	UpstreamName string `json:"upstream_model"`
 }
 
-type InferService struct {
-	cfg       config.Config
-	registry  *Registry
-	openaiCli *openai.Client
+type inferService struct {
+	// cfg       config.Config
+	// registry  *Registry
+	// openaiCli *openai.Client
 }
 
-func NewInferService(cfg config.Config, registry *Registry) *InferService {
-	s := &InferService{
-		cfg:      cfg,
-		registry: registry,
+var InferService *inferService
+
+func init() {
+	InferService = &inferService{
+		// cfg:      cfg,
+		// registry: registry,
 	}
-	if strings.TrimSpace(cfg.OpenAI.APIKey) != "" {
-		s.openaiCli = openai.NewClient(cfg.OpenAI.APIKey)
-	}
-	return s
 }
 
 // StreamInfer streams tokens to onToken and emits onMeta once at the beginning.
 // It does not deal with SSE formatting; handlers should convert tokens to SSE frames.
-func (s *InferService) StreamInfer(
+func (s *inferService) StreamInfer(
 	ctx context.Context,
 	model string,
 	version string,
 	input string,
-	onMeta func(meta InferMeta) error,
 	onToken func(token string) error,
 ) error {
-	snap, release, err := s.registry.AcquireForInfer(model, version)
+	snap, release, err := ModelRegistry.AcquireForInfer(model, version)
 	if err != nil {
 		return err
 	}
 	defer release()
-
-	meta := InferMeta{
-		Model:        model,
-		Version:      version,
-		RuntimeID:    snap.ID(),
-		BackendType:  snap.BackendType(),
-		Simulate:     snap.Simulate(),
-		UpstreamName: snap.UpstreamModel(),
-	}
-	if onMeta != nil {
-		if err := onMeta(meta); err != nil {
-			return err
-		}
-	}
-
-	// Decide backend.
 	backend := snap.BackendType()
-	useOpenAI := strings.EqualFold(backend, "openai") && !snap.Simulate() && s.openaiCli != nil
-	if useOpenAI {
+	switch backend {
+	case "openai":
 		return s.streamOpenAI(ctx, snap, input, onToken)
+	default:
+		return streamSimulated(ctx, input, onToken)
 	}
-	return streamSimulated(ctx, input, onToken)
 }
 
-func (s *InferService) streamOpenAI(
+func (s *inferService) streamOpenAI(
 	ctx context.Context,
 	snap *runtimeSnapshot,
 	input string,
 	onToken func(token string) error,
 ) error {
 	modelName := snap.UpstreamModel()
-	if strings.TrimSpace(modelName) == "" {
-		modelName = s.cfg.OpenAI.ChatModel
-	}
 
 	req := openai.ChatCompletionRequest{
 		Model:       modelName,
@@ -95,7 +73,7 @@ func (s *InferService) streamOpenAI(
 		Temperature: 1.0,
 	}
 
-	stream, err := s.openaiCli.CreateChatCompletionStream(ctx, req)
+	stream, err := client.OpenAI.CreateChatCompletionStream(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -123,10 +101,6 @@ func (s *InferService) streamOpenAI(
 }
 
 func streamSimulated(ctx context.Context, input string, onToken func(token string) error) error {
-	// Tokenize:
-	// - if input contains spaces, use Fields()
-	// - otherwise, split by rune as "token"
-	// This gives stable streaming behavior for both English and Chinese.
 	genText := "模拟回复：" + input
 	tokens := tokenize(genText)
 	if len(tokens) == 0 {

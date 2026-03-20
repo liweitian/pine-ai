@@ -38,7 +38,7 @@ func init() {
 	OpenAIService = &openAIService{}
 }
 
-func (o *openAIService) SimpleStreamingChatCompletion(ctx context.Context, model string, userId uint, chanStream chan string) error {
+func (o *openAIService) Infer(ctx context.Context, model string, userId uint, chanStream chan string) error {
 	req := openai.ChatCompletionRequest{
 		Model:       model,
 		MaxTokens:   MaxTokenLimit,

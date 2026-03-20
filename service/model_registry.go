@@ -174,9 +174,6 @@ func (r *Registry) List() []ModelVersionView {
 func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func(), error) {
 	rec, err := r.store.GetModel(context.Background(), name, version)
 	if err != nil {
-		if errors.Is(err, persistence.ErrModelNotFound) || errors.Is(err, persistence.ErrModelVersionNotFound) {
-			return nil, nil, errors.New("model version not found")
-		}
 		return nil, nil, err
 	}
 	if rec.Deleted {
@@ -186,7 +183,6 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 		return nil, nil, errors.New("model version unavailable")
 	}
 
-	// Get or create runtime snapshot. If it's missing, create one from persistence record.
 	r.runtimeMu.RLock()
 	snap := r.runtimes[name][version]
 	r.runtimeMu.RUnlock()
