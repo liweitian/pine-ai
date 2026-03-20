@@ -27,7 +27,7 @@ type ModelRecord struct {
 	ModelName     string      `json:"model_name"`
 	Version       string      `json:"version"`
 	BackendType   BackendType `json:"backend_type"`
-	IsMock        bool        `json:"is_mock"`
+	Simulate      bool        `json:"simulate"`
 	UpstreamModel string      `json:"upstream_model"`
 	Available     bool        `json:"available"`
 	Deleted       bool        `json:"deleted"`

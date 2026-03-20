@@ -69,7 +69,7 @@ func (r *Registry) Register(req dto.RegisterModelRequest) error {
 		ModelName:     req.ModelName,
 		Version:       req.Version,
 		BackendType:   persistence.BackendType(req.BackendType),
-		IsMock:        req.Simulate,
+		Simulate:      req.Simulate,
 		UpstreamModel: req.UpstreamModel,
 		Available:     true,
 		Deleted:       false,
@@ -119,7 +119,7 @@ func (r *Registry) Update(name, version string, req dto.UpdateModelRequest) erro
 	r.runtimeMu.Unlock()
 
 	rec.BackendType = persistence.BackendType(req.BackendType)
-	rec.IsMock = req.Simulate
+	rec.Simulate = req.Simulate
 	rec.UpstreamModel = req.UpstreamModel
 	rec.Available = true
 	rec.Deleted = false
@@ -158,7 +158,7 @@ func (r *Registry) List() []ModelVersionView {
 			ModelName:     rec.ModelName,
 			Version:       rec.Version,
 			BackendType:   string(rec.BackendType),
-			Simulate:      rec.IsMock,
+			Simulate:      rec.Simulate,
 			UpstreamModel: rec.UpstreamModel,
 			Available:     rec.Available,
 			InUse:         inUseCount > 0,
@@ -191,7 +191,7 @@ func (r *Registry) AcquireForInfer(name, version string) (*runtimeSnapshot, func
 		snap = &runtimeSnapshot{
 			id:            fmt.Sprintf("%s-%s-%d", name, version, time.Now().UnixNano()),
 			backendType:   string(rec.BackendType),
-			simulate:      rec.IsMock,
+			simulate:      rec.Simulate,
 			upstreamModel: rec.UpstreamModel,
 		}
 		r.runtimeMu.Lock()
