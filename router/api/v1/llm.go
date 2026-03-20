@@ -22,7 +22,7 @@ func RegisterModelAPI(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "model registered",
 		"model":   req.ModelName,
 		"version": req.Version,

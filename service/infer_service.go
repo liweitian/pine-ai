@@ -49,6 +49,9 @@ func (s *inferService) StreamInfer(
 		return err
 	}
 	defer release()
+	if snap.Simulate() {
+		return streamSimulated(ctx, input, onToken)
+	}
 	backend := snap.BackendType()
 	switch backend {
 	case "openai":
