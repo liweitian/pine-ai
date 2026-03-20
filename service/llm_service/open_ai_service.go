@@ -47,7 +47,7 @@ func (o *openAIService) Infer(ctx context.Context, model string, chanStream chan
 	}
 	stream, err := client.OpenAI.CreateChatCompletionStream(ctx, req)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	go func() {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"pine-ai/global/constant"
 	service "pine-ai/service/llm_service"
+	"strings"
 )
 
 type InferProvider interface {
@@ -47,6 +48,10 @@ func (s *inferService) StreamInfer(
 		provider = service.QwenService
 	case constant.BackendTypeMock:
 		provider = service.MockService
+	case constant.BackendTypeMockTimeout:
+		provider = service.MockService
+	case constant.BackendTypeMockNoResponse:
+		provider = service.MockService
 	default:
 		return errors.New("unknown backend type: " + backend)
 	}
@@ -69,6 +74,9 @@ func (s *inferService) StreamInfer(
 			case "<!error>":
 				return errors.New("infer stream backend error")
 			default:
+				if strings.HasPrefix(msg, "<!error>:") {
+					return errors.New(strings.TrimPrefix(msg, "<!error>:"))
+				}
 				if err := onToken(msg); err != nil {
 					return err
 				}

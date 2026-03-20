@@ -2,6 +2,7 @@ package router
 
 import (
 	v1 "pine-ai/router/api/v1"
+	"pine-ai/router/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -14,8 +15,8 @@ func InitRouter() *gin.Engine {
 	config.AllowHeaders = []string{"*"}
 	r := gin.New()
 	r.Use(cors.New(config))
-	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(middleware.TraceAndLog())
 
 	apiV1 := r.Group("/api/v1/pine-ai")
 	{

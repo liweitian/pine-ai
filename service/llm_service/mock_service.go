@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"pine-ai/global/constant"
 	"strings"
 	"time"
 )
@@ -14,7 +16,18 @@ func init() {
 	MockService = &mockService{}
 }
 
-func (m *mockService) Infer(ctx context.Context, _ string, chanStream chan string) error {
+func (m *mockService) Infer(ctx context.Context, model string, chanStream chan string) error {
+	mode := strings.ToLower(model)
+	if strings.Contains(mode, constant.BackendTypeMockTimeout) {
+		time.Sleep(3 * time.Second)
+		chanStream <- "<!error>:timeout"
+		return errors.New("mock timeout")
+	}
+	if strings.Contains(mode, constant.BackendTypeMockNoResponse) {
+		<-ctx.Done()
+		chanStream <- "<!error>:no_response"
+		return errors.New("mock no response")
+	}
 	go func() {
 		defer close(chanStream)
 		text := "mock service streaming response"
